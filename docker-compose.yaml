@@ -1,0 +1,30 @@
+version: '3'
+services:
+  lb:
+    image: damiend0cker/mvpmonlb
+    ports:
+      - "443:443"
+
+
+
+  backend:
+    image: damiend0cker/mvpback
+    ports:
+      - "5000:5000"
+    environment:
+      - BACKEND_URL=http://backend:5000
+    volumes:
+      - ./back:/app
+
+  frontend:
+    image: damiend0cker/mvpfront
+    hostname: front
+    container_name: appfront
+    ports:
+      - "80:80"
+    environment:
+      - BACKEND_URL=http://backend:5000
+    working_dir: /app
+    volumes:
+      - ./front:/app
+

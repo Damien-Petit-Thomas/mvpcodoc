@@ -1,0 +1,3 @@
+codoc.localhost: {
+  reverse_proxy front:80
+}

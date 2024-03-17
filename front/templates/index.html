@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>API Example</title>
+</head>
+
+<body>
+    <h1>API Example</h1>
+
+    <h2>Health Check</h2>
+    <button onclick="checkHealth()">Check Health</button>
+    <p id="healthStatus"></p>
+
+    <h2>Get Public Key</h2>
+    <button onclick="getPublicKey()">Get Public Key</button>
+    <p id="publicKey"></p>
+
+    <h2>Decode Message</h2>
+    <label for="message">Enter Message:</label><br>
+    <input type="text" id="message" name="message"><br>
+    <p class="encoded"></p>
+    <button onclick="encodeAndSend()">Encode and Send Message</button>
+    <p id="cryptedMessage"></p>
+    <p id="decodedMessage"></p>
+
+    <script>
+        // Fonction pour vérifier l'état de santé de l'API
+        function checkHealth() {
+            fetch('/health')
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    document.getElementById('healthStatus').textContent = 'API is healthy';
+                })
+                .catch(error => {
+                    console.error('There was a problem with the health check:', error);
+                    document.getElementById('healthStatus').textContent = 'API is not healthy';
+                });
+        }
+
+        // Fonction pour récupérer la clé publique RSA depuis le backend
+        function getPublicKey() {
+            fetch('/key')
+                .then(response => response.json())
+                .then(data => {
+                    // Stocker la clé publique RSA dans le localStorage
+                    localStorage.setItem('publicKey', data.public_key);
+                    console.log('Public Key:', data.public_key)
+                    console.log('private Key:', data.private_key)
+                    document.getElementById('publicKey').textContent = 'Public Key received and stored';
+                })
+                .catch(error => {
+                    console.error('There was a problem getting the public key:', error);
+                });
+        }
+
+
+
+
+
+
+        // Fonction pour encoder le message avec la clé publique RSA et l'envoyer au backend
+        async function  encodeAndSend() {
+            const ciphertext = await encryptMessage();
+            document.getElementById('cryptedMessage').textContent = 'Crypted Message: ' + ciphertext;
+            console.log('Ciphertext:', ciphertext);
+
+            fetch('/decode?msg=' + ciphertext)
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Decoded Message:', data.decoded_message);
+                    document.getElementById('decodedMessage').textContent = data.decoded_message;
+                })
+                .catch(error => {
+                    console.error('There was a problem decoding the message:', error);
+                });
+
+
+
+
+   
+        }
+
+  
+
+
+        function str2ab(str) {
+    const buf = new ArrayBuffer(str.length);
+    const bufView = new Uint8Array(buf);
+    for (let i = 0, strLen = str.length; i < strLen; i++) {
+      bufView[i] = str.charCodeAt(i);
+    }
+    return buf;
+  }
+
+
+  async function importPublicKey( ) {
+    const pem = localStorage.getItem('publicKey');
+    // fetch the part of the PEM string between header and footer
+    const pemHeader = "-----BEGIN PUBLIC KEY-----";
+    const pemFooter = "-----END PUBLIC KEY-----";
+    const pemContents = pem.substring(pemHeader.length, pem.length - pemFooter.length);
+    // base64 decode the string to get the binary data
+    const binaryDerString = window.atob(pemContents);
+    // convert from a binary string to an ArrayBuffer
+    const binaryDer = str2ab(binaryDerString);
+
+    return window.crypto.subtle.importKey(
+      "spki",
+      binaryDer,
+      {
+        name: "RSA-OAEP",
+        hash: "SHA-256"
+      },
+      true,
+      ["encrypt"]
+    );
+  }
+
+
+
+
+  function arrayBufferToHex(buffer) {
+    const byteArray = new Uint8Array(buffer);
+    const hexParts = [];
+    byteArray.forEach(byte => {
+        hexParts.push(byte.toString(16).padStart(2, '0'));
+    });
+    return hexParts.join('');
+}
+
+
+
+
+  function getMessageEncoding() {
+    const message = document.querySelector("#message").value
+    const encoder = new TextEncoder();
+    return encoder.encode(message);
+  }
+
+
+  async function encryptMessage() {
+    const encoded = getMessageEncoding();
+    const publicKey = await importPublicKey();
+    const ciphertext = await window.crypto.subtle.encrypt(
+      {
+        name: "RSA-OAEP"
+      },
+        publicKey,
+      encoded
+    );
+
+    return arrayBufferToHex(ciphertext);
+    }
+
+   
+
+
+
+    </script>
+</body>
+
+</html>

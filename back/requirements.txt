@@ -1,0 +1,4 @@
+flask
+rsa
+pycryptodome
+gunicorn
